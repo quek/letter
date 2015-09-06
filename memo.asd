@@ -6,4 +6,5 @@
                (:file "memo"))
   :depends-on (:info.read-eval-print.html
                :unpyo
-               :lepis))
+               :lepis
+               :info.read-eval-print.double-quote))

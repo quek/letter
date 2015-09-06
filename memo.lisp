@@ -1,22 +1,64 @@
 (in-package :memo)
 
+(named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
+
 ;; テンプレート
-(defmacro with-defalut-template (&body contents)
+(defmacro with-defalut-template ((&key (title "memo")) &body contents)
   `(html
-     (raw "<!DOCTYPE html>")
+     (:!doctype :html t)
      (:html
        :lang "ja"
        (:head (:meta :charset "UTF-8")
-         (:title "memo")
-         (:link :href "/stylesheets/main.css" :rel "stylesheet" :type "text/css"))
+         (:title ,title)
+         (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
        (:body
-        ,@contents))))
+           (:div (:a :href "/" "トップ"))
+         ,@contents))))
 
 ;; トップページ
 (defaction /root (:path "/")
-  (html
-   (:h1 "メモ")
-   (:p "メモ")))
+  (with-defalut-template ()
+    (:h1 "メモ")
+    (:ul
+        (dolist (title (zrang "titles" 0 nil))
+          (html
+            (:li
+                (:a :href #"""/show/#,title""" title)))))))
+
+(defaction /main.css ()
+  (setf (content-type) "text/css")
+  (format *html-output* "
+body {
+  color: #333;
+}
+textarea.edit {
+  width: 80%;
+  height: 400px;
+}
+"))
+
+(defun doc-key (title)
+  (format nil "doc ~a" title))
+
+(defaction /edit/@title ()
+  (let ((doc (@ (doc-key @title))))
+    (with-defalut-template (:title @title)
+      (:h1 @title)
+      (:form :action #"""/save/#,@title""" :method "post"
+        (:textarea.edit :name "doc" doc)
+        (:p (:input :type "submit" :value "save"))))))
+
+(defaction /save/@title (:method :post)
+  (! (doc-key @title) @doc)
+  (zadd "titles" (get-universal-time) @title)
+  (redirect (format nil "/show/~a" @title)))
+
+(defaction /show/@title ()
+  (let ((doc (@ (doc-key @title))))
+    (with-defalut-template (:title @title)
+      (:h1 @title)
+      (:pre doc)
+      (:p (:a :href (format nil "/edit/~a" @title) "編集")))))
 
 (defvar *server*)
 
@@ -29,6 +71,7 @@
 
 ;; start
 (defun start (&key (port *http-port*))
+  (format t "http://localhost:~d~%" port)
   (unless *db*
     (setf *db* (open-db (merge-pathnames "lepis/" *default-directory*))))
   ;; html
@@ -40,7 +83,7 @@
 
 ;; stop
 (defun stop ()
-  (stop *server*)
+  (unpyo:stop *server*)
   (when *db*
     (close-db *db*)
     (setf *db* nil)))
