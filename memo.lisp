@@ -24,15 +24,10 @@
 
 (defaction /main.css ()
   (setf (content-type) "text/css")
-  (format *html-output* "
-body {
-  color: #333;
-}
-textarea.edit {
-  width: 80%;
-  height: 400px;
-}
-"))
+  (write-string
+   (cl-css:css `((body :color \#333)
+                 (textarea.edit :width 80% :height 400px)))
+   *html-output*))
 
 (defun doc-key (title)
   (format nil "doc ~a" title))

@@ -7,5 +7,6 @@
   :depends-on (:info.read-eval-print.series-ext
                :info.read-eval-print.double-quote
                :info.read-eval-print.html
+               :cl-css
                :unpyo
                :lepis))
