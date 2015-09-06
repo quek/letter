@@ -4,7 +4,8 @@
   :components ((:file "packages")
                (:file "config")
                (:file "memo"))
-  :depends-on (:info.read-eval-print.html
+  :depends-on (:info.read-eval-print.series-ext
+               :info.read-eval-print.double-quote
+               :info.read-eval-print.html
                :unpyo
-               :lepis
-               :info.read-eval-print.double-quote))
+               :lepis))

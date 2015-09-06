@@ -19,11 +19,8 @@
 (defaction /root (:path "/")
   (with-defalut-template ()
     (:h1 "メモ")
-    (:ul
-        (dolist (title (zrang "titles" 0 nil))
-          (html
-            (:li
-                (:a :href #"""/show/#,title""" title)))))))
+    (:ul (iterate ((title (scan (zrang "titles" 0 nil))))
+           (html (:li (:a :href #"""/show/#,title""" title)))))))
 
 (defaction /main.css ()
   (setf (content-type) "text/css")
