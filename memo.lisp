@@ -19,7 +19,8 @@
 (defaction /root (:path "/")
   (with-defalut-template ()
     (:h1 "メモ")
-    (:ul (iterate ((title (scan (zrang "titles" 0 nil))))
+    (:p (:a :href "/new" "新しく作る"))
+    (:ul (iterate ((title (scan (zrang "titles" 0 nil :from-end t))))
            (html (:li (:a :href #"""/show/#,title""" title)))))))
 
 (defaction /main.css ()
@@ -40,17 +41,35 @@
         (:textarea.edit :name "doc" doc)
         (:p (:input :type "submit" :value "save"))))))
 
-(defaction /save/@title (:method :post)
-  (! (doc-key @title) @doc)
-  (zadd "titles" (get-universal-time) @title)
-  (redirect (format nil "/show/~a" @title)))
+(defaction /new ()
+  (with-defalut-template (:title "新しく作る")
+    (:form :action #"""/create""" :method "post"
+      (:p (:input :type "text" :name "title"))
+      (:p (:textarea.edit :name "doc" ""))
+      (:p (:input :type "submit" :value "save")))))
+
+(macrolet ((body ()
+             `(unpyo::with-@param
+                (! (doc-key @title) @doc)
+                (zadd "titles" (get-universal-time) @title)
+                (redirect (format nil "/show/~a" @title)))))
+  (defaction /create (:method :post)
+    (body))
+  (defaction /save/@title (:method :post)
+    (body)))
 
 (defaction /show/@title ()
   (let ((doc (@ (doc-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
       (:pre doc)
-      (:p (:a :href (format nil "/edit/~a" @title) "編集")))))
+      (:p (:a :href #"""/edit/#,@title""" "編集"))
+      (:p (:a :href #"""/delete/#,@title""" "削除")))))
+
+(defaction /delete/@title ()
+  (del (doc-key @title))
+  (zrem "titles" @title)
+  (redirect "/"))
 
 (defvar *server*)
 
