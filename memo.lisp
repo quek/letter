@@ -2,6 +2,8 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
+(defvar *users* '*users*)
+
 (defun doc-key (title)
   (format nil "doc ~a" title))
 
@@ -45,6 +47,31 @@
     (:p (:a :href "/new" "新しく作る"))
     (:ul (iterate ((title (scan (zrang "titles" 0 nil :from-end t))))
            (html (:li (:a :href #"""/show/#,title""" title)))))))
+
+(defaction /login ()
+  (with-defalut-template ()
+    (:a :href #"""https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=#,*oauth-client-id*,&redirect_uri=http://localhost:1959/oauth2callback&scope=https://www.googleapis.com/auth/userinfo.email"""
+      "Google アカウントでログイン")))
+
+(defaction /oauth2callback ()
+  (let ((token (oauth2:request-token
+                "https://www.googleapis.com/oauth2/v3/token"
+                @code
+                :method :post
+                :redirect-uri "http://localhost:1959/oauth2callback"
+                :other `(("client_id" . ,*oauth-client-id*)
+                         ("client_secret" . ,*oauth-client-secret*)))))
+    (with-input-from-string
+        (stream
+         (map 'string 'code-char
+           (oauth2:request-resource "https://www.googleapis.com/oauth2/v2/userinfo"
+                                    token)))
+      (let* ((userinfo (json:decode-json stream))
+             (email (cdr (assoc :email userinfo))))
+        (hset *users* email userinfo)
+        (with-defalut-template ()
+          (html (:pre (hget *users* email))))))))
+
 
 (defaction /edit/@title ()
   (let ((doc (@ (doc-key @title))))
@@ -98,9 +125,19 @@
   (with-db ((merge-pathnames "lepis/" *default-directory*))
     (call-next-method)))
 
+(defparameter *oauth-secret-file* (merge-pathnames "google-oauth.lisp" *default-directory*))
+(defvar *oauth-client-id* nil)
+(defvar *oauth-client-secret* nil)
+(defun load-google-oauth ()
+  (with-open-file (in *oauth-secret-file*)
+    (let ((x (read in)))
+      (setf *oauth-client-id* (getf x :client-id)
+            *oauth-client-secret* (getf x :client-secret)))))
+
 ;; start
 (defun start (&key (port *http-port*))
   (format t "http://localhost:~d~%" port)
+  (load-google-oauth)
   (unless *db*
     (setf *db* (open-db (merge-pathnames "lepis/" *default-directory*))))
   ;; html
