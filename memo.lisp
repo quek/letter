@@ -2,6 +2,9 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
+(defun doc-key (title)
+  (format nil "doc ~a" title))
+
 ;; テンプレート
 (defmacro with-defalut-template ((&key (title "memo")) &body contents)
   `(html
@@ -10,10 +13,30 @@
        :lang "ja"
        (:head (:meta :charset "UTF-8")
          (:title ,title)
+         (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
+         (:link :rel "stylesheet" :href "//cdn.jsdelivr.net/editor/0.1.0/editor.css")
+         (:script :src "//cdn.jsdelivr.net/editor/0.1.0/editor.js")
+         (:script :src "//cdn.jsdelivr.net/editor/0.1.0/marked.js")
          (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
        (:body
            (:div (:a :href "/" "トップ"))
          ,@contents))))
+
+(defaction /main.css ()
+  (setf (content-type) "text/css")
+  (write-string colorize:*coloring-css* *html-output*)
+  (write-string
+   (cl-css:css
+     `((body :color \#333)
+       (".CodeMirror" :height 400px)))
+   *html-output*))
+
+(defun markdown-editor (doc)
+  (html
+    (:textarea :name "doc" doc)
+    (:script (ps:ps ($ (lambda ()
+                         (ps:let ((editor (ps:new (*editor))))
+                           (ps:chain editor (render)))))))))
 
 ;; トップページ
 (defaction /root (:path "/")
@@ -23,30 +46,20 @@
     (:ul (iterate ((title (scan (zrang "titles" 0 nil :from-end t))))
            (html (:li (:a :href #"""/show/#,title""" title)))))))
 
-(defaction /main.css ()
-  (setf (content-type) "text/css")
-  (write-string
-   (cl-css:css `((body :color \#333)
-                 (textarea.edit :width 80% :height 400px)))
-   *html-output*))
-
-(defun doc-key (title)
-  (format nil "doc ~a" title))
-
 (defaction /edit/@title ()
   (let ((doc (@ (doc-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
-        (:textarea.edit :name "doc" doc)
-        (:p (:input :type "submit" :value "save"))))))
+        (:p (:input :type "submit" :value "save"))
+        (:p (markdown-editor doc))))))
 
 (defaction /new ()
   (with-defalut-template (:title "新しく作る")
     (:form :action #"""/create""" :method "post"
+      (:p (:input :type "submit" :value "save"))
       (:p (:input :type "text" :name "title"))
-      (:p (:textarea.edit :name "doc" ""))
-      (:p (:input :type "submit" :value "save")))))
+      (:p (:textarea.edit :name "doc" "")))))
 
 (macrolet ((body ()
              `(unpyo::with-@param
@@ -58,11 +71,16 @@
   (defaction /save/@title (:method :post)
     (body)))
 
+(defun print-markdown (doc)
+  (let ((3bmd-code-blocks:*code-blocks* t)
+        (3bmd-code-blocks:*code-blocks-default-colorize* :common-lisp))
+    (3bmd:parse-string-and-print-to-stream doc *html-output*)))
+
 (defaction /show/@title ()
   (let ((doc (@ (doc-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
-      (:pre doc)
+      (print-markdown doc)
       (:p (:a :href #"""/edit/#,@title""" "編集"))
       (:p (:a :href #"""/delete/#,@title""" "削除")))))
 

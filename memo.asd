@@ -8,5 +8,8 @@
                :info.read-eval-print.double-quote
                :info.read-eval-print.html
                :cl-css
+               :3bmd
+               :3bmd-ext-code-blocks
+               :parenscript
                :unpyo
                :lepis))
