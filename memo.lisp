@@ -2,27 +2,34 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
+(defvar *session-user* "user")
+
 (defvar *users* '*users*)
 
 (defun doc-key (title)
   (format nil "doc ~a" title))
 
 ;; テンプレート
-(defmacro with-defalut-template ((&key (title "memo")) &body contents)
-  `(html
-     (:!doctype :html t)
-     (:html
-       :lang "ja"
-       (:head (:meta :charset "UTF-8")
-         (:title ,title)
-         (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
-         (:link :rel "stylesheet" :href "//cdn.jsdelivr.net/editor/0.1.0/editor.css")
-         (:script :src "//cdn.jsdelivr.net/editor/0.1.0/editor.js")
-         (:script :src "//cdn.jsdelivr.net/editor/0.1.0/marked.js")
-         (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
-       (:body
-           (:div (:a :href "/" "トップ"))
-         ,@contents))))
+(defmacro with-defalut-template ((&key (title "memo") (login-required t))
+                                 &body contents)
+  `(progn
+     (if (and ,login-required (null (unpyo:session *session-user*)))
+         (redirect "/login")
+         (html
+           (:!doctype :html t)
+           (:html
+             :lang "ja"
+             (:head (:meta :charset "UTF-8")
+               (:title ,title)
+               (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
+               (:link :rel "stylesheet" :href "//cdn.jsdelivr.net/editor/0.1.0/editor.css")
+               (:script :src "//cdn.jsdelivr.net/editor/0.1.0/editor.js")
+               (:script :src "//cdn.jsdelivr.net/editor/0.1.0/marked.js")
+               (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
+             (:body
+                 (:div.menu (:div (:a :href "/" "トップ"))
+                   (:div (session *session-user*)))
+               ,@contents))))))
 
 (defaction /main.css ()
   (setf (content-type) "text/css")
@@ -30,7 +37,9 @@
   (write-string
    (cl-css:css
      `((body :color \#333)
-       (".CodeMirror" :height 400px)))
+       (".CodeMirror" height 400px)
+       (.menu float right)
+       (".menu div" float left margin-left 10px)))
    *html-output*))
 
 (defun markdown-editor (doc)
@@ -49,7 +58,7 @@
            (html (:li (:a :href #"""/show/#,title""" title)))))))
 
 (defaction /login ()
-  (with-defalut-template ()
+  (with-defalut-template (:login-required nil)
     (:a :href #"""https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=#,*oauth-client-id*,&redirect_uri=http://localhost:1959/oauth2callback&scope=https://www.googleapis.com/auth/userinfo.email"""
       "Google アカウントでログイン")))
 
@@ -69,8 +78,8 @@
       (let* ((userinfo (json:decode-json stream))
              (email (cdr (assoc :email userinfo))))
         (hset *users* email userinfo)
-        (with-defalut-template ()
-          (html (:pre (hget *users* email))))))))
+        (setf (unpyo:session *session-user*) email)
+        (redirect "/")))))
 
 
 (defaction /edit/@title ()
@@ -143,7 +152,7 @@
   ;; html
   (setf info.read-eval-print.html:*html-pprint* nil)
   ;; Unpyo
-  (setf *invoke-debugger-p* nil)
+  (setf *invoke-debugger-p* t)
   (setq *server* (make-server :app (make-instance 'memo-app) :port port))
   (run *server*))
 
