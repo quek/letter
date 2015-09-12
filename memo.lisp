@@ -63,23 +63,25 @@
       "Google アカウントでログイン")))
 
 (defaction /oauth2callback ()
-  (let ((token (oauth2:request-token
-                "https://www.googleapis.com/oauth2/v3/token"
-                @code
-                :method :post
-                :redirect-uri "http://localhost:1959/oauth2callback"
-                :other `(("client_id" . ,*oauth-client-id*)
-                         ("client_secret" . ,*oauth-client-secret*)))))
-    (with-input-from-string
-        (stream
-         (map 'string 'code-char
-           (oauth2:request-resource "https://www.googleapis.com/oauth2/v2/userinfo"
-                                    token)))
-      (let* ((userinfo (json:decode-json stream))
-             (email (cdr (assoc :email userinfo))))
-        (hset *users* email userinfo)
-        (setf (unpyo:session *session-user*) email)
-        (redirect "/")))))
+  (if @code
+      (let ((token (oauth2:request-token
+                    "https://www.googleapis.com/oauth2/v3/token"
+                    @code
+                    :method :post
+                    :redirect-uri "http://localhost:1959/oauth2callback"
+                    :other `(("client_id" . ,*oauth-client-id*)
+                             ("client_secret" . ,*oauth-client-secret*)))))
+        (with-input-from-string
+            (stream
+             (map 'string 'code-char
+               (oauth2:request-resource "https://www.googleapis.com/oauth2/v2/userinfo"
+                                        token)))
+          (let* ((userinfo (json:decode-json stream))
+                 (email (cdr (assoc :email userinfo))))
+            (hset *users* email userinfo)
+            (setf (unpyo:session *session-user*) email)
+            (redirect "/"))))
+      (redirect "/login")))
 
 
 (defaction /edit/@title ()
@@ -95,7 +97,7 @@
     (:form :action #"""/create""" :method "post"
       (:p (:input :type "submit" :value "save"))
       (:p (:input :type "text" :name "title"))
-      (:p (:textarea.edit :name "doc" "")))))
+      (:p (markdown-editor "")))))
 
 (macrolet ((body ()
              `(unpyo::with-@param
