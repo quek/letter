@@ -5,9 +5,10 @@
 (defvar *session-user* "user")
 
 (defvar *users* '*users*)
+(defvar *titles* '*titles*)
 
 (defun doc-key (title)
-  (format nil "doc ~a" title))
+  (format nil "doc:~a" *docs* title))
 
 ;; テンプレート
 (defmacro with-defalut-template ((&key (title "memo") (login-required t))
@@ -42,9 +43,9 @@
        (".menu div" float left margin-left 10px)))
    *html-output*))
 
-(defun markdown-editor (doc)
+(defun markdown-editor (body)
   (html
-    (:textarea :name "doc" doc)
+    (:textarea :name "body" body)
     (:script (ps:ps ($ (lambda ()
                          (ps:let ((editor (ps:new (*editor))))
                            (ps:chain editor (render)))))))))
@@ -54,7 +55,7 @@
   (with-defalut-template ()
     (:h1 "メモ")
     (:p (:a :href "/new" "新しく作る"))
-    (:ul (iterate ((title (scan (zrang "titles" 0 nil :from-end t))))
+    (:ul (iterate ((title (scan (zrang *titles*  0 nil :from-end t))))
            (html (:li (:a :href #"""/show/#,title""" title)))))))
 
 (defaction /login ()
@@ -64,33 +65,34 @@
 
 (defaction /oauth2callback ()
   (if @code
-      (let ((token (oauth2:request-token
-                    "https://www.googleapis.com/oauth2/v3/token"
-                    @code
-                    :method :post
-                    :redirect-uri "http://localhost:1959/oauth2callback"
-                    :other `(("client_id" . ,*oauth-client-id*)
-                             ("client_secret" . ,*oauth-client-secret*)))))
-        (with-input-from-string
-            (stream
-             (map 'string 'code-char
-               (oauth2:request-resource "https://www.googleapis.com/oauth2/v2/userinfo"
-                                        token)))
-          (let* ((userinfo (json:decode-json stream))
-                 (email (cdr (assoc :email userinfo))))
-            (hset *users* email userinfo)
-            (setf (unpyo:session *session-user*) email)
-            (redirect "/"))))
+      (let* ((token (oauth2:request-token
+                     "https://www.googleapis.com/oauth2/v3/token"
+                     @code
+                     :method :post
+                     :redirect-uri "http://localhost:1959/oauth2callback"
+                     :other `(("client_id" . ,*oauth-client-id*)
+                              ("client_secret" . ,*oauth-client-secret*))))
+             (userinfo (with-input-from-string
+                           (stream
+                            (map 'string 'code-char
+                              (oauth2:request-resource
+                               "https://www.googleapis.com/oauth2/v2/userinfo"
+                               token)))
+                         (json:decode-json stream)))
+             (email (cdr (assoc :email userinfo))))
+        (hset *users* email userinfo)
+        (setf (unpyo:session *session-user*) email)
+        (redirect "/"))
       (redirect "/login")))
 
 
 (defaction /edit/@title ()
-  (let ((doc (@ (doc-key @title))))
+  (let ((doc (hget (doc-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
         (:p (:input :type "submit" :value "save"))
-        (:p (markdown-editor doc))))))
+        (:p (markdown-editor (gethash :body doc)))))))
 
 (defaction /new ()
   (with-defalut-template (:title "新しく作る")
@@ -99,32 +101,37 @@
       (:p (:input :type "text" :name "title"))
       (:p (markdown-editor "")))))
 
-(macrolet ((body ()
+(macrolet ((body (&rest args)
              `(unpyo::with-@param
-                (! (doc-key @title) @doc)
-                (zadd "titles" (get-universal-time) @title)
+                (hset (doc-key @title)
+                      :body @body
+                      :updated-at (get-universal-time)
+                      :updated-by (unpyo:session *session-user*)
+                      ,@args)
+                (zadd *titles* (get-universal-time) @title)
                 (redirect (format nil "/show/~a" @title)))))
   (defaction /create (:method :post)
-    (body))
+    (body :created-at '(get-universal-time)
+          :created-by '(unpyo:session *session-user*)))
   (defaction /save/@title (:method :post)
     (body)))
 
-(defun print-markdown (doc)
+(defun print-markdown (body)
   (let ((3bmd-code-blocks:*code-blocks* t)
         (3bmd-code-blocks:*code-blocks-default-colorize* :common-lisp))
-    (3bmd:parse-string-and-print-to-stream doc *html-output*)))
+    (3bmd:parse-string-and-print-to-stream body *html-output*)))
 
 (defaction /show/@title ()
   (let ((doc (@ (doc-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
-      (print-markdown doc)
+      (print-markdown (gethash :body doc))
       (:p (:a :href #"""/edit/#,@title""" "編集"))
       (:p (:a :href #"""/delete/#,@title""" "削除")))))
 
 (defaction /delete/@title ()
   (del (doc-key @title))
-  (zrem "titles" @title)
+  (zrem *titles* @title)
   (redirect "/"))
 
 (defvar *server*)
