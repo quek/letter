@@ -10,7 +10,11 @@
                :cl-css
                :3bmd
                :3bmd-ext-code-blocks
+               :anaphora
                :parenscript
                :oauth2
+               :diff
+               :cl-ppcre
+               :hu.dwim.defclass-star
                :unpyo
                :lepis))

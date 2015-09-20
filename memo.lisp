@@ -4,17 +4,83 @@
 
 (defvar *session-user* "user")
 
-(defvar *users* '*users*)
 (defvar *titles* '*titles*)
 
-(defun doc-key (title)
-  (format nil "doc ~a" title))
+
+(defclass* memo ()
+  ((title)
+   (body :reader body-of :initform "" :initarg nil)
+   (created-at :accessor created-at :initform (get-universal-time))
+   (created-by :accessor created-by :initform (current-user))
+   (updated-at :accessor updated-at :initform (get-universal-time))
+   (updated-by :accessor updated-by :initform (current-user))
+   (histroies :initform nil)))
+
+(defmethod lepis.util:value< ((a memo) (b memo))
+  (string< (title-of a) (title-of b)))
+
+(defmethod lepis.util:value= ((a memo) (b memo))
+  (string= (title-of a) (title-of b)))
+
+(defclass* history ()
+  (diff
+   (updated-at :accessor updated-at)
+   (updated-by :accessor updated-by)))
+
+(defmethod initialize-instance :after ((memo memo) &rest initargs &key body)
+  (declare (ignore initargs))
+  (setf (body-of memo) body)
+  (unless (slot-boundp memo 'created-by)
+    (setf (created-by memo) (updated-by memo))))
+
+(defmethod (setf body-of) (new (memo memo))
+  (let* ((old (slot-value memo 'body))
+         (diff (diff:generate-seq-diff 'diff:unified-diff (lines old) (lines new)))
+         (histroy (make-instance 'history
+                                 :diff (with-output-to-string (s)
+                                         (diff:render-diff diff s))
+                                 :updated-at (updated-at memo)
+                                 :updated-by (updated-by memo))))
+    (push histroy (histroies-of memo))
+    (setf (slot-value memo 'body) new)))
+
+
+(defparameter *user-attributes* '(:id
+                                  :email
+                                  :name
+                                  :link
+                                  :picture))
+(defclass* user ()
+  (id
+   email
+   name
+   link
+   picture))
+
+(defmethod lepis.util:value< ((a user) (b user))
+  (string< (id-of a) (id-of b)))
+
+(defmethod lepis.util:value= ((a user) (b user))
+  (string= (id-of a) (id-of b)))
+
+
+(defun lines (string)
+  (ppcre:split "\\r?\\n" string))
+
+(defun memo-key (title)
+  #"""user #,title""")
+
+(defun user-key (id)
+  #"""user #,id""")
+
+(defun current-user ()
+  (@ (user-key (unpyo:session *session-user*))))
 
 ;; テンプレート
 (defmacro with-defalut-template ((&key (title "memo") (login-required t))
                                  &body contents)
   `(progn
-     (if (and ,login-required (null (unpyo:session *session-user*)))
+     (if (and ,login-required (not (current-user)))
          (redirect "/login")
          (html
            (:!doctype :html t)
@@ -29,7 +95,7 @@
                (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
              (:body
                  (:div.menu (:div (:a :href "/" "トップ"))
-                   (:div (session *session-user*)))
+                            (:div (and (current-user) (email-of (current-user)))))
                ,@contents))))))
 
 (defaction /main.css ()
@@ -55,8 +121,8 @@
   (with-defalut-template ()
     (:h1 "メモ")
     (:p (:a :href "/new" "新しく作る"))
-    (:ul (iterate ((title (scan (zrang *titles*  0 nil :from-end t))))
-           (html (:li (:a :href #"""/show/#,title""" title)))))))
+    (:ul (iterate ((memo (scan (zrang *titles*  0 nil :from-end t))))
+           (html (:li (:a :href #"""/show/#,(title-of memo)""" (title-of memo))))))))
 
 (defaction /login ()
   (with-defalut-template (:login-required nil)
@@ -64,35 +130,43 @@
       "Google アカウントでログイン")))
 
 (defaction /oauth2callback ()
-  (if @code
-      (let* ((token (oauth2:request-token
-                     "https://www.googleapis.com/oauth2/v3/token"
-                     @code
-                     :method :post
-                     :redirect-uri "http://localhost:1959/oauth2callback"
-                     :other `(("client_id" . ,*oauth-client-id*)
-                              ("client_secret" . ,*oauth-client-secret*))))
-             (userinfo (with-input-from-string
-                           (stream
-                            (map 'string 'code-char
-                              (oauth2:request-resource
-                               "https://www.googleapis.com/oauth2/v2/userinfo"
-                               token)))
-                         (json:decode-json stream)))
-             (email (cdr (assoc :email userinfo))))
-        (hset *users* email userinfo)
-        (setf (unpyo:session *session-user*) email)
-        (redirect "/"))
-      (redirect "/login")))
+  (handler-case
+      (if @code
+          (let* ((token (oauth2:request-token
+                         "https://www.googleapis.com/oauth2/v3/token"
+                         @code
+                         :method :post
+                         :redirect-uri "http://localhost:1959/oauth2callback"
+                         :other `(("client_id" . ,*oauth-client-id*)
+                                  ("client_secret" . ,*oauth-client-secret*))))
+                 (userinfo (with-input-from-string
+                               (stream
+                                (map 'string 'code-char
+                                  (oauth2:request-resource
+                                   "https://www.googleapis.com/oauth2/v2/userinfo"
+                                   token)))
+                             (json:decode-json stream)))
+                 (user (apply #'make-instance 'user
+                              (mapcan (lambda (key)
+                                        (list key
+                                              (cdr (assoc key userinfo))))
+                                      *user-attributes*))))
+            (! (user-key (id-of user)) user)
+            (setf (unpyo:session *session-user*) (id-of user))
+            (redirect "/"))
+          (redirect "/login"))
+    (oauth2::request-token-error (e)
+      (print e)
+      (redirect "/login"))))
 
 
 (defaction /edit/@title ()
-  (let ((doc (hget (doc-key @title))))
+  (let ((memo (@ (memo-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
         (:p (:input :type "submit" :value "save"))
-        (:p (markdown-editor (gethash :body doc)))))))
+        (:p (markdown-editor (body-of memo)))))))
 
 (defaction /new ()
   (with-defalut-template (:title "新しく作る")
@@ -101,20 +175,21 @@
       (:p (:input :type "text" :name "title"))
       (:p (markdown-editor "")))))
 
-(macrolet ((body (&rest args)
-             `(unpyo::with-@param
-                (hset (doc-key @title)
-                      :body @body
-                      :updated-at (get-universal-time)
-                      :updated-by (unpyo:session *session-user*)
-                      ,@args)
-                (zadd *titles* (get-universal-time) @title)
-                (redirect (format nil "/show/~a" @title)))))
-  (defaction /create (:method :post)
-    (body :created-at '(get-universal-time)
-          :created-by '(unpyo:session *session-user*)))
-  (defaction /save/@title (:method :post)
-    (body)))
+(defaction /create (:method :post)
+  (let ((memo (make-instance 'memo
+                             :title @title
+                             :body @body)))
+    (! (memo-key @title) memo)
+    (zadd *titles* (updated-at memo) memo)
+    (redirect (format nil "/show/~a" @title))))
+
+(defaction /save/@title (:method :post)
+  (let ((memo (@ (memo-key @title))))
+    (setf (body-of memo) @body)
+    (setf (updated-at memo) (get-universal-time))
+    (setf (updated-by memo) (current-user))
+    (zadd *titles* (updated-at memo) memo)
+    (redirect (format nil "/show/~a" @title))))
 
 (defun print-markdown (body)
   (let ((3bmd-code-blocks:*code-blocks* t)
@@ -122,17 +197,19 @@
     (3bmd:parse-string-and-print-to-stream body *html-output*)))
 
 (defaction /show/@title ()
-  (let ((doc (@ (doc-key @title))))
+  (let ((memo (@ (memo-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
-      (print-markdown (gethash :body doc))
+      (print-markdown (body-of memo))
       (:p (:a :href #"""/edit/#,@title""" "編集"))
       (:p (:a :href #"""/delete/#,@title""" "削除")))))
 
 (defaction /delete/@title ()
-  (del (doc-key @title))
-  (zrem *titles* @title)
+  (let ((memo (@ (memo-key @title))))
+    (del memo)
+    (zrem *titles* memo))
   (redirect "/"))
+
 
 (defvar *server*)
 
