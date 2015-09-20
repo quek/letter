@@ -8,7 +8,7 @@
 (defvar *titles* '*titles*)
 
 (defun doc-key (title)
-  (format nil "doc:~a" *docs* title))
+  (format nil "doc ~a" title))
 
 ;; テンプレート
 (defmacro with-defalut-template ((&key (title "memo") (login-required t))

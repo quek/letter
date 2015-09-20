@@ -11,5 +11,6 @@
                :3bmd
                :3bmd-ext-code-blocks
                :parenscript
+               :oauth2
                :unpyo
                :lepis))
