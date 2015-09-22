@@ -6,7 +6,7 @@
 
 (defvar *titles* '*titles*)
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defclass* memo ()
   ((title)
    (body :reader body-of :initform "" :initarg nil)
@@ -44,7 +44,7 @@
     (push histroy (histroies-of memo))
     (setf (slot-value memo 'body) new)))
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defparameter *user-attributes* '(:id
                                   :email
                                   :name
@@ -63,7 +63,19 @@
 (defmethod lepis.util:value= ((a user) (b user))
   (string= (id-of a) (id-of b)))
 
+(defmethod generate-token ((user user))
+  (let ((*print-base* 32))
+    (prin1-to-string
+     (ironclad:octets-to-integer
+      (ironclad:digest-sequence
+       :sha256
+       (ironclad:integer-to-octets
+        (logxor (ironclad:octets-to-integer (babel:string-to-octets (id-of user)))
+                (get-universal-time)
+                (random #xffffffff))))))))
+;; (generate-token (make-instance 'user :id "1234"))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun lines (string)
   (ppcre:split "\\r?\\n" string))
 
