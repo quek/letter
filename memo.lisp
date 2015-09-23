@@ -159,9 +159,7 @@
                                    token)))
                              (json:decode-json stream)))
                  (user (apply #'make-instance 'user
-                              (mapcan (lambda (key)
-                                        (list key
-                                              (cdr (assoc key userinfo))))
+                              (mapcan (^ (list _key (cdr (assoc _key userinfo))))
                                       *user-attributes*))))
             (! (user-key (id-of user)) user)
             (setf (unpyo:session *session-user*) (id-of user))

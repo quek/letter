@@ -4,6 +4,7 @@
         :anaphora
         :unpyo
         :info.read-eval-print.html
+        :info.read-eval-print.lambda
         :lepis)
   (:shadow :unpyo #:stop)
   (:export #:start
