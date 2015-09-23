@@ -138,7 +138,7 @@
 
 (defaction /login ()
   (with-defalut-template (:login-required nil)
-    (:a :href #"""https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=#,*oauth-client-id*,&redirect_uri=http://localhost:1959/oauth2callback&scope=https://www.googleapis.com/auth/userinfo.email"""
+    (:a :href #"""https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=#,*oauth-client-id*,&redirect_uri=#,*oauth-callback-url*,&scope=https://www.googleapis.com/auth/userinfo.email"""
       "Google アカウントでログイン")))
 
 (defaction /oauth2callback ()
@@ -148,7 +148,7 @@
                          "https://www.googleapis.com/oauth2/v3/token"
                          @code
                          :method :post
-                         :redirect-uri "http://localhost:1959/oauth2callback"
+                         :redirect-uri *oauth-callback-url*
                          :other `(("client_id" . ,*oauth-client-id*)
                                   ("client_secret" . ,*oauth-client-secret*))))
                  (userinfo (with-input-from-string
@@ -233,11 +233,13 @@
 (defparameter *oauth-secret-file* (merge-pathnames "google-oauth.lisp" *default-directory*))
 (defvar *oauth-client-id* nil)
 (defvar *oauth-client-secret* nil)
+(defvar *oauth-callback-url* nil)
 (defun load-google-oauth ()
   (with-open-file (in *oauth-secret-file*)
     (let ((x (read in)))
       (setf *oauth-client-id* (getf x :client-id)
-            *oauth-client-secret* (getf x :client-secret)))))
+            *oauth-client-secret* (getf x :client-secret)
+            *oauth-callback-url* (getf x :callback-url)))))
 
 ;; start
 (defun start (&key (port *http-port*))
