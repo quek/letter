@@ -22,6 +22,10 @@
 (defmethod lepis.util:value= ((a memo) (b memo))
   (string= (title-of a) (title-of b)))
 
+(defmethod print-object ((memo memo) stream)
+  (print-unreadable-object (memo stream :type t :identity t)
+    (princ (title-of memo) stream)))
+
 (defclass* history ()
   (diff
    (updated-at :accessor updated-at)
@@ -88,6 +92,15 @@
 (defun current-user ()
   (@ (user-key (unpyo:session *session-user*))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmacro js (&body body)
+  `(html
+     (:script
+         (raw
+          (ps:ps ,@body)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; テンプレート
 (defmacro with-defalut-template ((&key (title "memo") (login-required t))
                                  &body contents)
@@ -118,15 +131,13 @@
      `((body :color \#333)
        (".CodeMirror" height 400px)
        (.menu float right)
-       (".menu div" float left margin-left 10px)))
+       (".menu div" float left margin-left 10px)
+       (.markdown-textarea width 90% height 400px)))
    *html-output*))
 
 (defun markdown-editor (body)
   (html
-    (:textarea :name "body" body)
-    (:script (ps:ps ($ (lambda ()
-                         (ps:let ((editor (ps:new (*editor))))
-                           (ps:chain editor (render)))))))))
+    (:textarea.markdown-textarea :name "body" body)))
 
 ;; トップページ
 (defaction /root (:path "/")
@@ -169,21 +180,44 @@
       (print e)
       (redirect "/login"))))
 
+(defun markdown-preview ()
+  (html
+    (:div#preview-area)
+    (js
+      ($ (lambda ()
+           (ps:chain
+            ($ "#preview")
+            (click (lambda (e)
+                     (ps:chain e (prevent-default))
+                     (ps:chain
+                      $
+                      (get "/preview"
+                           (ps:create body (ps:chain ($ "textarea[name=body]") (val)))
+                           (lambda (r)
+                             (ps:chain ($ "#preview-area")
+                                       (html r)))))))))))))
 
 (defaction /edit/@title ()
   (let ((memo (@ (memo-key @title))))
     (with-defalut-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
-        (:p (:input :type "submit" :value "save"))
-        (:p (markdown-editor (body-of memo)))))))
+        (:p (:input :type "submit" :value "save")
+          (:a#preview :href "#" "preview"))
+        (:p (markdown-editor (body-of memo))))
+      (markdown-preview))))
+
+(defaction /preview ()
+  (print-markdown @body))
 
 (defaction /new ()
   (with-defalut-template (:title "新しく作る")
     (:form :action #"""/create""" :method "post"
-      (:p (:input :type "submit" :value "save"))
+      (:p (:input :type "submit" :value "save")
+        (:a#preview :href "#" "preview"))
       (:p (:input :type "text" :name "title"))
-      (:p (markdown-editor "")))))
+      (:p (markdown-editor "")))
+    (markdown-preview)))
 
 (defaction /create (:method :post)
   (let ((memo (make-instance 'memo
