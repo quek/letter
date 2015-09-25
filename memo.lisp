@@ -259,7 +259,15 @@
       (:h1 @title)
       (print-markdown (body-of memo))
       (:p (:a :href #"""/edit/#,@title""" "編集"))
-      (:p (:a :href #"""/delete/#,@title""" "削除")))))
+      (:p (:a :href #"""/show/#,@title,/history""" "履歴")
+        " "
+        (:a :href #"""/delete/#,@title""" "削除")))))
+
+(defaction /show/@title/history ()
+  (let ((memo (@ (memo-key @title))))
+    (with-default-template (:title @title)
+      (loop for h in (histroies-of memo) do
+        (html (:pre (diff-of h)))))))
 
 (defaction /delete/@title ()
   (let ((memo (@ (memo-key @title))))
