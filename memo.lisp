@@ -114,9 +114,6 @@
              (:head (:meta :charset "UTF-8")
                (:title ,title)
                (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
-               (:link :rel "stylesheet" :href "//cdn.jsdelivr.net/editor/0.1.0/editor.css")
-               (:script :src "//cdn.jsdelivr.net/editor/0.1.0/editor.js")
-               (:script :src "//cdn.jsdelivr.net/editor/0.1.0/marked.js")
                (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
              (:body
                  (:div.menu (:div (:a :href "/" "トップ"))
@@ -129,7 +126,6 @@
   (write-string
    (cl-css:css
      `((body :color \#333)
-       (".CodeMirror" height 400px)
        (.menu float right)
        (".menu div" float left margin-left 10px)
        (.markdown-textarea width 90% height 400px)))
