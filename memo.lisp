@@ -2,9 +2,11 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
-(defvar *session-user* "user")
-
-(defvar *titles* '*titles*)
+(defvar *titles* '*titles* "memo をメンバ、更新日時をスコアにした zset")
+(defvar *session-user* "user" "(id-of user) を設定するセッションキー")
+(defvar *cookie-auth-token* "auth" "認証トークンを設定するクッキーキー")
+(defparameter *auth-token-expire-seconds* (* 60 60 24 14)
+  "認証トークンの有効期間 14日")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defclass* memo ()
@@ -89,8 +91,16 @@
 (defun user-key (id)
   #"""user #,id""")
 
+(defun auth-token-key (token)
+  #"""auth-token #,token""")
+
 (defun current-user ()
-  (@ (user-key (unpyo:session *session-user*))))
+  (or (@ (user-key (unpyo:session *session-user*)))
+      (aif (unpyo:cookie *cookie-auth-token*)
+           (let ((user (@ it)))
+             (setf (unpyo:session *session-user*) (id-of user))
+             user))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmacro js (&body body)
@@ -102,7 +112,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; テンプレート
-(defmacro with-defalut-template ((&key (title "memo") (login-required t))
+(defmacro with-default-template ((&key (title "memo") (login-required t))
                                  &body contents)
   `(progn
      (if (and ,login-required (not (current-user)))
@@ -137,14 +147,14 @@
 
 ;; トップページ
 (defaction /root (:path "/")
-  (with-defalut-template ()
+  (with-default-template ()
     (:h1 "メモ")
     (:p (:a :href "/new" "新しく作る"))
     (:ul (iterate ((memo (scan (zrang *titles*  0 nil :from-end t))))
            (html (:li (:a :href #"""/show/#,(title-of memo)""" (title-of memo))))))))
 
 (defaction /login ()
-  (with-defalut-template (:login-required nil)
+  (with-default-template (:login-required nil)
     (:a :href #"""https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=#,*oauth-client-id*,&redirect_uri=#,*oauth-callback-url*,&scope=https://www.googleapis.com/auth/userinfo.email"""
       "Google アカウントでログイン")))
 
@@ -170,6 +180,13 @@
                                       *user-attributes*))))
             (! (user-key (id-of user)) user)
             (setf (unpyo:session *session-user*) (id-of user))
+            (let ((auth-token-key (auth-token-key (generate-token user))))
+              (! auth-token-key user)
+              (expire auth-token-key *auth-token-expire-seconds*)
+              (setf (unpyo:cookie *cookie-auth-token*
+                                  :expires `(,*auth-token-expire-seconds* :sec)
+                                  :http-only t)
+                    auth-token-key))
             (redirect "/"))
           (redirect "/login"))
     (oauth2::request-token-error (e)
@@ -195,7 +212,7 @@
 
 (defaction /edit/@title ()
   (let ((memo (@ (memo-key @title))))
-    (with-defalut-template (:title @title)
+    (with-default-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
         (:p (:input :type "submit" :value "save")
@@ -207,7 +224,7 @@
   (print-markdown @body))
 
 (defaction /new ()
-  (with-defalut-template (:title "新しく作る")
+  (with-default-template (:title "新しく作る")
     (:form :action #"""/create""" :method "post"
       (:p (:input :type "submit" :value "save")
         (:a#preview :href "#" "preview"))
@@ -238,7 +255,7 @@
 
 (defaction /show/@title ()
   (let ((memo (@ (memo-key @title))))
-    (with-defalut-template (:title @title)
+    (with-default-template (:title @title)
       (:h1 @title)
       (print-markdown (body-of memo))
       (:p (:a :href #"""/edit/#,@title""" "編集"))
