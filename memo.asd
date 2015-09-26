@@ -3,7 +3,9 @@
   :serial t
   :components ((:file "packages")
                (:file "config")
-               (:file "memo"))
+               (:file "util")
+               (:file "memo")
+               (:file "css"))
   :depends-on (:info.read-eval-print.series-ext
                :info.read-eval-print.double-quote
                :info.read-eval-print.html
