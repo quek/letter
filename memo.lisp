@@ -86,7 +86,7 @@
   (ppcre:split "\\r?\\n" string))
 
 (defun memo-key (title)
-  #"""user #,title""")
+  #"""memo #,title""")
 
 (defun user-key (id)
   #"""user #,id""")
