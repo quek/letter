@@ -82,9 +82,6 @@
 ;; (generate-token (make-instance 'user :id "1234"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun lines (string)
-  (ppcre:split "\\r?\\n" string))
-
 (defun memo-key (title)
   #"""memo #,title""")
 
@@ -112,6 +109,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; テンプレート
+(defvar *errors* nil "エラーメッセージ")
 (defmacro with-default-template ((&key (title "memo") (login-required t))
                                  &body contents)
   `(progn
@@ -119,39 +117,45 @@
          (redirect "/login")
          (html
            (:!doctype :html t)
-           (:html
-             :lang "ja"
+           (:html :lang "ja"
              (:head (:meta :charset "UTF-8")
+               (:meta :name "viewport" :content "width=device-width, initial-scale=1")
                (:title ,title)
-               (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
-               (:link :href "/main.css" :rel "stylesheet" :type "text/css"))
+               (:link :rel "stylesheet"
+                 :href "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css")
+               (:link :rel "stylesheet" :href
+                 "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css")
+               (:link :href "/main.css" :rel "stylesheet" :type "text/css")
+               (:script :src "https://code.jquery.com/jquery-2.1.4.min.js"))
              (:body
-                 (:div.menu (:div (:a :href "/" "トップ"))
-                            (:div (and (current-user) (email-of (current-user)))))
-               ,@contents))))))
-
-(defaction /main.css ()
-  (setf (content-type) "text/css")
-  (write-string colorize:*coloring-css* *html-output*)
-  (write-string
-   (cl-css:css
-     `((body :color \#333)
-       (.menu float right)
-       (".menu div" float left margin-left 10px)
-       (.markdown-textarea width 90% height 400px)))
-   *html-output*))
+                 (:nav.navbar.navbar-inverse
+                  (:div.container-fluid
+                   (:div.navbar-header
+                    (:a.navbar-brand :href "/" "letter"))
+                   (:div.navbar-right
+                    (:div.login-user (and (current-user) (email-of (current-user)))))))
+               (:div.container-fluid
+                (when *errors*
+                  (html
+                    (:ul
+                        (loop for error in *errors* do
+                          (html (:li.text-warning error))))))
+                ,@contents)
+               (:script :src "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js")))))))
 
 (defun markdown-editor (body)
   (html
-    (:textarea.markdown-textarea :name "body" body)))
+    (:textarea#body.markdown-textarea :name "body" body)))
 
 ;; トップページ
 (defaction /root (:path "/")
   (with-default-template ()
-    (:h1 "メモ")
-    (:p (:a :href "/new" "新しく作る"))
-    (:ul (iterate ((memo (scan (zrang *titles*  0 nil :from-end t))))
-           (html (:li (:a :href #"""/show/#,(title-of memo)""" (title-of memo))))))))
+    (:p (:a.btn.btn-default :href "/new" "新しく作る"))
+    (:ul (loop for (memo . time) in (zrang *titles*  0 nil :from-end t :with-scores t) do
+      (html (:li.memo-as-list
+             (:a :href #"""/show/#,(title-of memo)"""
+               (:h3 (title-of memo))
+               (:span.time (time-to-s time)))))))))
 
 (defaction /login ()
   (with-default-template (:login-required nil)
@@ -195,50 +199,59 @@
 
 (defun markdown-preview ()
   (html
-    (:div#preview-area)
+    (:div#preview-area "プレビュー")
     (js
       ($ (lambda ()
            (ps:chain
-            ($ "#preview")
-            (click (lambda (e)
-                     (ps:chain e (prevent-default))
-                     (ps:chain
-                      $
-                      (get "/preview"
-                           (ps:create body (ps:chain ($ "textarea[name=body]") (val)))
-                           (lambda (r)
-                             (ps:chain ($ "#preview-area")
-                                       (html r)))))))))))))
+            ($ document)
+            (on "keydown input" "#body"
+                (lambda (e)
+                  (ps:chain
+                   $
+                   (get "/preview"
+                        (ps:create body (ps:chain ($ "#body") (val)))
+                        (lambda (r)
+                          (ps:chain ($ "#preview-area")
+                                    (html r))))))))
+           (if (ps:chain ($ "#body") (val))
+               (ps:chain
+                ($ "#body")
+                (trigger "keydown"))))))))
+
+(defun markdown-form (body)
+  (html(:div.row
+        (:div.col-xs-6
+         (markdown-editor body)
+         (:button.btn.btn-primary :type "submit" "save"))
+        (:div.col-xs-6
+         (markdown-preview)))))
 
 (defaction /edit/@title ()
   (let ((memo (@ (memo-key @title))))
     (with-default-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
-        (:p (:input :type "submit" :value "save")
-          (:a#preview :href "#" "preview"))
-        (:p (markdown-editor (body-of memo))))
-      (markdown-preview))))
-
-(defaction /preview ()
-  (print-markdown @body))
+        (markdown-form (body-of memo))))))
 
 (defaction /new ()
   (with-default-template (:title "新しく作る")
     (:form :action #"""/create""" :method "post"
-      (:p (:input :type "submit" :value "save")
-        (:a#preview :href "#" "preview"))
-      (:p (:input :type "text" :name "title"))
-      (:p (markdown-editor "")))
-    (markdown-preview)))
+      (:div.form-group
+       (:label :for "title" "タイトル")
+       (:input#title.form-control :type "text" :name "title" :value @title))
+      (markdown-form @body))))
 
 (defaction /create (:method :post)
-  (let ((memo (make-instance 'memo
-                             :title @title
-                             :body @body)))
-    (! (memo-key @title) memo)
-    (zadd *titles* (updated-at memo) memo)
-    (redirect (format nil "/show/~a" @title))))
+  (if (blankp @title)
+      (progn
+        (push "タイトルを入力してください。" *errors*)
+        (/new))
+      (let ((memo (make-instance 'memo
+                                 :title @title
+                                 :body @body)))
+        (! (memo-key @title) memo)
+        (zadd *titles* (updated-at memo) memo)
+        (redirect (format nil "/show/~a" @title)))))
 
 (defaction /save/@title (:method :post)
   (let ((memo (@ (memo-key @title))))
@@ -258,10 +271,10 @@
     (with-default-template (:title @title)
       (:h1 @title)
       (print-markdown (body-of memo))
-      (:p (:a :href #"""/edit/#,@title""" "編集"))
-      (:p (:a :href #"""/show/#,@title,/history""" "履歴")
+      (:p (:a.btn.btn-primary :href #"""/edit/#,@title""" "編集"))
+      (:p (:a.btn.btn-default :href #"""/show/#,@title,/history""" "履歴")
         " "
-        (:a :href #"""/delete/#,@title""" "削除")))))
+        (:a.btn.btn-danger :href #"""/delete/#,@title""" "削除")))))
 
 (defaction /show/@title/history ()
   (let ((memo (@ (memo-key @title))))
@@ -284,7 +297,8 @@
 
 (defmethod call :around ((app memo-app))
   (with-db ((merge-pathnames "lepis/" *default-directory*))
-    (call-next-method)))
+    (let ((*errors* nil))
+     (call-next-method))))
 
 (defparameter *oauth-secret-file* (merge-pathnames "google-oauth.lisp" *default-directory*))
 (defvar *oauth-client-id* nil)
