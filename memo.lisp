@@ -306,7 +306,6 @@
   ;; html
   (setf info.read-eval-print.html:*html-pprint* nil)
   ;; Unpyo
-  (setf *invoke-debugger-p* t)
   (setq *server* (make-server :app (make-instance 'memo-app) :port port))
   (run *server*))
 
