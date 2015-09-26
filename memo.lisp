@@ -96,10 +96,10 @@
 
 (defun current-user ()
   (or (@ (user-key (unpyo:session *session-user*)))
-      (aif (unpyo:cookie *cookie-auth-token*)
-           (let ((user (@ it)))
-             (setf (unpyo:session *session-user*) (id-of user))
-             user))))
+      (awhen (unpyo:cookie *cookie-auth-token*)
+        (awhen (@ it)
+          (setf (unpyo:session *session-user*) (id-of it))
+          it))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -267,7 +267,8 @@
   (let ((memo (@ (memo-key @title))))
     (with-default-template (:title @title)
       (loop for h in (histroies-of memo) do
-        (html (:pre (diff-of h)))))))
+        (html (:pre (diff-of h))))
+      (html (:p (:a :href #"""/show/#,@title""" "戻る"))))))
 
 (defaction /delete/@title ()
   (let ((memo (@ (memo-key @title))))
