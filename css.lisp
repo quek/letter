@@ -2,7 +2,7 @@
 
 (defaction /main.css ()
   (setf (content-type) "text/css")
-  (write-string colorize:*coloring-css* *html-output*)
+  (write-string colorize:*coloring-css* *request*)
   (css
     `((.markdown-textarea :width 100% :height 400px)
       (.login-user :color \#eee :margin 5px 10px 0 0)

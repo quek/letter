@@ -218,6 +218,9 @@
                 ($ "#body")
                 (trigger "keydown"))))))))
 
+(defaction /preview ()
+  (print-markdown @body))
+
 (defun markdown-form (body)
   (html(:div.row
         (:div.col-xs-6
@@ -264,7 +267,7 @@
 (defun print-markdown (body)
   (let ((3bmd-code-blocks:*code-blocks* t)
         (3bmd-code-blocks:*code-blocks-default-colorize* :common-lisp))
-    (3bmd:parse-string-and-print-to-stream body *html-output*)))
+    (3bmd:parse-string-and-print-to-stream body *request*)))
 
 (defaction /show/@title ()
   (let ((memo (@ (memo-key @title))))

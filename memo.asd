@@ -8,7 +8,6 @@
                (:file "css"))
   :depends-on (:info.read-eval-print.series-ext
                :info.read-eval-print.double-quote
-               :info.read-eval-print.html
                :info.read-eval-print.lambda
                :3bmd
                :3bmd-ext-code-blocks
