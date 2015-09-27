@@ -109,7 +109,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; テンプレート
-(defvar *errors* nil "エラーメッセージ")
 (defmacro with-default-template ((&key (title "memo") (login-required t))
                                  &body contents)
   `(progn
@@ -135,11 +134,9 @@
                    (:div.navbar-right
                     (:div.login-user (and (current-user) (email-of (current-user)))))))
                (:div.container-fluid
-                (when *errors*
-                  (html
-                    (:ul
-                        (loop for error in *errors* do
-                          (html (:li.text-warning error))))))
+                (awhen (errors)
+                  (html (:ul (loop for error in it do
+                    (html (:li.text-warning error))))))
                 ,@contents)
                (:script :src "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js")))))))
 
@@ -184,7 +181,7 @@
                                       *user-attributes*))))
             (if (and (fboundp 'auth-check) (not (auth-check user)))
                 (progn
-                  (push "そのアカウントではログインできません。" *errors*)
+                  (add-error "そのアカウントではログインできません。")
                   (redirect "/login"))
                 (progn
                   (! (user-key (id-of user)) user)
@@ -252,7 +249,7 @@
 (defaction /create (:method :post)
   (if (blankp @title)
       (progn
-        (push "タイトルを入力してください。" *errors*)
+        (add-error "タイトルを入力してください。")
         (/new))
       (let ((memo (make-instance 'memo
                                  :title @title
@@ -305,8 +302,7 @@
 
 (defmethod call :around ((app memo-app))
   (with-db ((merge-pathnames "lepis/" *default-directory*))
-    (let ((*errors* nil))
-     (call-next-method))))
+    (call-next-method)))
 
 (defparameter *oauth-secret-file* (merge-pathnames "google-oauth.lisp" *default-directory*))
 (defvar *oauth-client-id* nil)

@@ -12,3 +12,12 @@
 (defun blankp (thing)
   (or (null thing)
       (equal "" thing)))
+
+(defvar *errors* '*errors* "エラーメッセージ")
+
+(defun add-error (error)
+  (push error (session *errors*)))
+
+(defun errors ()
+  (prog1 (session *errors*)
+    (rem-session *errors*)))
