@@ -182,16 +182,21 @@
                  (user (apply #'make-instance 'user
                               (mapcan (^ (list _key (cdr (assoc _key userinfo))))
                                       *user-attributes*))))
-            (! (user-key (id-of user)) user)
-            (setf (unpyo:session *session-user*) (id-of user))
-            (let ((auth-token-key (auth-token-key (generate-token user))))
-              (! auth-token-key user)
-              (expire auth-token-key *auth-token-expire-seconds*)
-              (setf (unpyo:cookie *cookie-auth-token*
-                                  :expires `(,*auth-token-expire-seconds* :sec)
-                                  :http-only t)
-                    auth-token-key))
-            (redirect "/"))
+            (if (and (fboundp 'auth-check) (not (auth-check user)))
+                (progn
+                  (push "そのアカウントではログインできません。" *errors*)
+                  (redirect "/login"))
+                (progn
+                  (! (user-key (id-of user)) user)
+                  (setf (unpyo:session *session-user*) (id-of user))
+                  (let ((auth-token-key (auth-token-key (generate-token user))))
+                    (! auth-token-key user)
+                    (expire auth-token-key *auth-token-expire-seconds*)
+                    (setf (unpyo:cookie *cookie-auth-token*
+                                        :expires `(,*auth-token-expire-seconds* :sec)
+                                        :http-only t)
+                          auth-token-key))
+                  (redirect "/"))))
           (redirect "/login"))
     (oauth2::request-token-error (e)
       (print e)
