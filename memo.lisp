@@ -98,15 +98,6 @@
           (setf (unpyo:session *session-user*) (id-of it))
           it))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmacro js (&body body)
-  `(html
-     (:script
-         (raw
-          (ps:ps ,@body)))))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; テンプレート
 (defmacro with-default-template ((&key (title "memo") (login-required t))
@@ -125,7 +116,8 @@
                (:link :rel "stylesheet" :href
                  "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css")
                (:link :href "/main.css" :rel "stylesheet" :type "text/css")
-               (:script :src "https://code.jquery.com/jquery-2.1.4.min.js"))
+               (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
+               (:script :src "https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"))
              (:body
                  (:nav.navbar.navbar-inverse
                   (:div.container-fluid
@@ -203,22 +195,18 @@
   (html
     (:div#preview-area "プレビュー")
     (js
-      ($ (lambda ()
-           (ps:chain
-            ($ document)
-            (on "keydown input" "#body"
-                (lambda (e)
-                  (ps:chain
-                   $
-                   (get "/preview"
-                        (ps:create body (ps:chain ($ "#body") (val)))
-                        (lambda (r)
-                          (ps:chain ($ "#preview-area")
-                                    (html r))))))))
-           (if (ps:chain ($ "#body") (val))
-               (ps:chain
-                ($ "#body")
-                (trigger "keydown"))))))))
+      ($ (^ (let (($body ($ "#body")))
+              (\. ($ document)
+                  (on "keydown input" "#body"
+                      (\. *_ (debounce (^ (\. $
+                                              (get "/preview"
+                                                   ({} body (\. $body (val)))
+                                                   (^ (\. ($ "#preview-area")
+                                                          (html _r))))))
+                                       100))))
+              (if (\. $body (val))
+                  (\. $body
+                      (trigger "keydown")))))))))
 
 (defaction /preview ()
   (print-markdown @body))

@@ -21,3 +21,21 @@
 (defun errors ()
   (prog1 (session *errors*)
     (rem-session *errors*)))
+
+(defmacro js (&body body)
+  (labels ((f (x)
+             (if (atom x)
+                 (cond ((eq x '\.)
+                        'ps:chain)
+                       ((eq x '{})
+                        'ps:create)
+                       ((eq x 'let)
+                        'ps:let)
+                       (t x))
+                 (cons (f (car x)) (f (cdr x))))))
+    `(html
+       (:script
+           (raw
+            (ps:ps ,@(f body)))))))
+
+(ps:import-macros-from-lisp '^)
