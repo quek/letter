@@ -263,7 +263,8 @@
      (ppcre:regex-replace-all "\\[\\[([^]]+)\\]\\]"
                               html
                               "<a href=\"/show/\\1\">\\1</a>")
-     *request*)))
+     *request*))
+  nil)
 
 (defaction /show/@title ()
   (let ((memo (@ (memo-key @title))))
