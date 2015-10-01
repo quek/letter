@@ -277,9 +277,10 @@
       (html (:p (:a :href #"""/show/#,@title""" "戻る"))))))
 
 (defaction /delete/@title ()
-  (let ((memo (@ (memo-key @title))))
-    (del memo)
-    (zrem *titles* memo))
+  (let* ((key (memo-key @title))
+         (memo (@ key)))
+    (zrem *titles* memo)
+    (del key))
   (redirect "/"))
 
 
@@ -288,6 +289,7 @@
 (defclass memo-app (application)
   ())
 
+#+nil
 (defmethod call :around ((app memo-app))
   (with-db ((merge-pathnames "lepis/" *default-directory*))
     (call-next-method)))
