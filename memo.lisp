@@ -255,9 +255,15 @@
     (redirect (format nil "/show/~a" @title))))
 
 (defun print-markdown (body)
-  (let ((3bmd-code-blocks:*code-blocks* t)
-        (3bmd-code-blocks:*code-blocks-default-colorize* :common-lisp))
-    (3bmd:parse-string-and-print-to-stream body *request*)))
+  (let* ((3bmd-code-blocks:*code-blocks* t)
+         (3bmd-code-blocks:*code-blocks-default-colorize* :common-lisp)
+         (html (with-output-to-string (out)
+                 (3bmd:parse-string-and-print-to-stream body out))))
+    (write-string
+     (ppcre:regex-replace-all "\\[\\[([^]]+)\\]\\]"
+                              html
+                              "<a href=\"/show/\\1\">\\1</a>")
+     *request*)))
 
 (defaction /show/@title ()
   (let ((memo (@ (memo-key @title))))
