@@ -4,8 +4,10 @@
   :components ((:file "packages")
                (:file "config")
                (:file "util")
+               (:file "condition")
                (:file "memo")
-               (:file "css"))
+               (:file "css")
+               (:file "public"))
   :depends-on (:info.read-eval-print.series-ext
                :info.read-eval-print.double-quote
                :info.read-eval-print.lambda

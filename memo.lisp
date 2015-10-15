@@ -12,6 +12,7 @@
 (defclass* memo ()
   ((title)
    (body :reader body-of :initform "" :initarg nil)
+   (public :accessor publicp :initform nil)
    (created-at :accessor created-at :initform (get-universal-time))
    (created-by :accessor created-by :initform (current-user))
    (updated-at :accessor updated-at :initform (get-universal-time))
@@ -85,6 +86,12 @@
 (defun memo-key (title)
   #"""memo #,title""")
 
+(defun find-memo (title &key (not-found-error-p t))
+  (or (@ (memo-key title))
+      (if not-found-error-p
+          (error (make-condition 'not-found-error))
+          nil)))
+
 (defun user-key (id)
   #"""user #,id""")
 
@@ -144,7 +151,9 @@
       (html (:li.memo-as-list
              (:a :href #"""/show/#,(title-of memo)"""
                (:h3 (title-of memo))
-               (:span.time (time-to-s time)))))))))
+               (:span.time (time-to-s time))
+               (when (publicp memo)
+                 (html (:span.public "公開"))))))))))
 
 (defaction /login ()
   (with-default-template (:login-required nil)
@@ -211,20 +220,24 @@
 (defaction /preview ()
   (print-markdown @body))
 
-(defun markdown-form (body)
+(defun markdown-form (body &key (publicp nil))
   (html(:div.row
         (:div.col-xs-6
          (markdown-editor body)
+         (:div.form-group
+          (:label :for "public"
+            (:input#public :type "checkbox" :name "public" :value t :checked publicp)
+            "公開"))
          (:button.btn.btn-primary :type "submit" "save"))
         (:div.col-xs-6
          (markdown-preview)))))
 
 (defaction /edit/@title ()
-  (let ((memo (@ (memo-key @title))))
+  (let ((memo (find-memo @title)))
     (with-default-template (:title @title)
       (:h1 @title)
       (:form :action #"""/save/#,@title""" :method "post"
-        (markdown-form (body-of memo))))))
+        (markdown-form (body-of memo) :publicp (publicp memo))))))
 
 (defaction /new ()
   (with-default-template (:title "新しく作る")
@@ -247,8 +260,9 @@
         (redirect (format nil "/show/~a" @title)))))
 
 (defaction /save/@title (:method :post)
-  (let ((memo (@ (memo-key @title))))
+  (let ((memo (find-memo @title)))
     (setf (body-of memo) @body)
+    (setf (publicp memo) @public)
     (setf (updated-at memo) (get-universal-time))
     (setf (updated-by memo) (current-user))
     (zadd *titles* (updated-at memo) memo)
@@ -267,9 +281,12 @@
   nil)
 
 (defaction /show/@title ()
-  (let ((memo (@ (memo-key @title))))
+  (let ((memo (find-memo @title)))
     (with-default-template (:title @title)
       (:h1 @title)
+      (if (publicp memo)
+          (html (:p.text-danger "公開"))
+          (html (:p  "非公開")))
       (print-markdown (body-of memo))
       (:p (:a.btn.btn-primary :href #"""/edit/#,@title""" "編集"))
       (:p (:a.btn.btn-default :href #"""/show/#,@title,/history""" "履歴")
@@ -277,7 +294,7 @@
         (:a.btn.btn-danger :href #"""/delete/#,@title""" "削除")))))
 
 (defaction /show/@title/history ()
-  (let ((memo (@ (memo-key @title))))
+  (let ((memo (find-memo @title)))
     (with-default-template (:title @title)
       (loop for h in (histroies-of memo) do
         (html (:pre (diff-of h))))
@@ -296,10 +313,11 @@
 (defclass memo-app (application)
   ())
 
-#+nil
 (defmethod call :around ((app memo-app))
-  (with-db ((merge-pathnames "lepis/" *default-directory*))
-    (call-next-method)))
+  (handler-case (call-next-method)
+    (not-found-error ()
+      (html
+        (:h1 "見つかりません。")))))
 
 (defparameter *oauth-secret-file* (merge-pathnames "google-oauth.lisp" *default-directory*))
 (defvar *oauth-client-id* nil)
