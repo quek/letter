@@ -7,3 +7,5 @@
 (defparameter *http-port* 1959 "HTTP のポート。")
 
 (defparameter *swank-port* 4009 "SLIME のポート。")
+
+(setf unpyo::*session-secret* "hello world!")
