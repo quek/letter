@@ -316,8 +316,10 @@
 (defmethod call :around ((app memo-app))
   (handler-case (call-next-method)
     (not-found-error ()
-      (html
-        (:h1 "見つかりません。")))))
+      (404-not-found app))))
+
+(defmethod 404-not-found ((app memo-app))
+  (html (:h1 "見つかりません。")))
 
 (defparameter *oauth-secret-file* (merge-pathnames "google-oauth.lisp" *default-directory*))
 (defvar *oauth-client-id* nil)
