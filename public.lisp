@@ -32,9 +32,9 @@
                  (:h3 (title-of memo))
                  (:span.time (time-to-s time))))))))
      (:div.col-xs-9
-      (let ((memo (car (zrang *publics* 0 0 :from-end t))))
-        (html (:h1 (title-of memo)
-                (print-markdown (body-of memo)))))))))
+      (awhen (car (zrang *publics* 0 0 :from-end t))
+        (html (:h1 (title-of it)
+                (print-markdown (body-of it)))))))))
 
 (defaction /public/@title ()
   (let ((memo (find-memo @title)))

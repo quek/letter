@@ -57,6 +57,7 @@
 (defaction /root (:path "/")
   (with-default-template ()
     (:p (:a.btn.btn-default :href "/new" "新しく作る"))
+    (:p (:a :href "/public" "公開ページ"))
     (:ul (loop for (memo . time) in (zrang *titles* 0 nil :from-end t :with-scores t) do
       (html (:li.memo-as-list
              (:a :href #"""/show/#,(title-of memo)"""
