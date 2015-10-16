@@ -1,5 +1,7 @@
 (in-package :memo)
 
+(named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
+
 (defmacro with-public-template ((&key (title "memo")) &body contents)
   `(html
      (:!doctype :html t)
