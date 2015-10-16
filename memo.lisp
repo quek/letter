@@ -2,102 +2,12 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
-(defvar *titles* '*titles* "memo をメンバ、更新日時をスコアにした zset")
 (defvar *session-user* "user" "(id-of user) を設定するセッションキー")
 (defvar *cookie-auth-token* "auth" "認証トークンを設定するクッキーキー")
 (defparameter *auth-token-expire-seconds* (* 60 60 24 14)
   "認証トークンの有効期間 14日")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defclass* memo ()
-  ((title)
-   (body :reader body-of :initform "" :initarg nil)
-   (public :accessor publicp :initform nil)
-   (created-at :accessor created-at :initform (get-universal-time))
-   (created-by :accessor created-by :initform (current-user))
-   (updated-at :accessor updated-at :initform (get-universal-time))
-   (updated-by :accessor updated-by :initform (current-user))
-   (histroies :initform nil)))
-
-(defmethod lepis.util:value< ((a memo) (b memo))
-  (string< (title-of a) (title-of b)))
-
-(defmethod lepis.util:value= ((a memo) (b memo))
-  (string= (title-of a) (title-of b)))
-
-(defmethod print-object ((memo memo) stream)
-  (print-unreadable-object (memo stream :type t :identity t)
-    (princ (title-of memo) stream)))
-
-(defclass* history ()
-  (diff
-   (updated-at :accessor updated-at)
-   (updated-by :accessor updated-by)))
-
-(defmethod initialize-instance :after ((memo memo) &rest initargs &key body)
-  (declare (ignore initargs))
-  (setf (body-of memo) body)
-  (unless (slot-boundp memo 'created-by)
-    (setf (created-by memo) (updated-by memo))))
-
-(defmethod (setf body-of) (new (memo memo))
-  (let* ((old (slot-value memo 'body))
-         (diff (diff:generate-seq-diff 'diff:unified-diff (lines old) (lines new)))
-         (histroy (make-instance 'history
-                                 :diff (with-output-to-string (s)
-                                         (diff:render-diff diff s))
-                                 :updated-at (updated-at memo)
-                                 :updated-by (updated-by memo))))
-    (push histroy (histroies-of memo))
-    (setf (slot-value memo 'body) new)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *user-attributes* '(:id
-                                  :email
-                                  :name
-                                  :link
-                                  :picture))
-(defclass* user ()
-  (id
-   email
-   name
-   link
-   picture))
-
-(defmethod lepis.util:value< ((a user) (b user))
-  (string< (id-of a) (id-of b)))
-
-(defmethod lepis.util:value= ((a user) (b user))
-  (string= (id-of a) (id-of b)))
-
-(defmethod generate-token ((user user))
-  (let ((*print-base* 32))
-    (prin1-to-string
-     (ironclad:octets-to-integer
-      (ironclad:digest-sequence
-       :sha256
-       (ironclad:integer-to-octets
-        (logxor (ironclad:octets-to-integer (babel:string-to-octets (id-of user)))
-                (get-universal-time)
-                (random #xffffffff))))))))
-;; (generate-token (make-instance 'user :id "1234"))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun memo-key (title)
-  #"""memo #,title""")
-
-(defun find-memo (title &key (not-found-error-p t))
-  (or (@ (memo-key title))
-      (if not-found-error-p
-          (error (make-condition 'not-found-error))
-          nil)))
-
-(defun user-key (id)
-  #"""user #,id""")
-
-(defun auth-token-key (token)
-  #"""auth-token #,token""")
-
 (defun current-user ()
   (or (@ (user-key (unpyo:session *session-user*)))
       (awhen (unpyo:cookie *cookie-auth-token*)
@@ -147,7 +57,7 @@
 (defaction /root (:path "/")
   (with-default-template ()
     (:p (:a.btn.btn-default :href "/new" "新しく作る"))
-    (:ul (loop for (memo . time) in (zrang *titles*  0 nil :from-end t :with-scores t) do
+    (:ul (loop for (memo . time) in (zrang *titles* 0 nil :from-end t :with-scores t) do
       (html (:li.memo-as-list
              (:a :href #"""/show/#,(title-of memo)"""
                (:h3 (title-of memo))
@@ -221,22 +131,23 @@
   (print-markdown @body))
 
 (defun markdown-form (body &key (publicp nil))
-  (html(:div.row
-        (:div.col-xs-6
-         (markdown-editor body)
-         (:div.form-group
-          (:label :for "public"
-            (:input#public :type "checkbox" :name "public" :value t :checked publicp)
-            "公開"))
-         (:button.btn.btn-primary :type "submit" "save"))
-        (:div.col-xs-6
-         (markdown-preview)))))
+  (html
+    (:div.row
+     (:div.col-xs-6
+      (markdown-editor body)
+      (:div.form-group
+       (:label :for "public"
+         (:input#public :type "checkbox" :name "public" :value 1 :checked publicp)
+         "公開"))
+      (:button.btn.btn-primary :type "submit" "save"))
+     (:div.col-xs-6
+      (markdown-preview)))))
 
 (defaction /edit/@title ()
   (let ((memo (find-memo @title)))
     (with-default-template (:title @title)
       (:h1 @title)
-      (:form :action #"""/save/#,@title""" :method "post"
+      (:form :action #"""/update/#,@title""" :method "post"
         (markdown-form (body-of memo) :publicp (publicp memo))))))
 
 (defaction /new ()
@@ -252,21 +163,15 @@
       (progn
         (add-error "タイトルを入力してください。")
         (/new))
-      (let ((memo (make-instance 'memo
-                                 :title @title
-                                 :body @body)))
-        (! (memo-key @title) memo)
-        (zadd *titles* (updated-at memo) memo)
+      (progn
+        (create-memo :title @title
+                     :body @body
+                     :public @public)
         (redirect (format nil "/show/~a" @title)))))
 
-(defaction /save/@title (:method :post)
-  (let ((memo (find-memo @title)))
-    (setf (body-of memo) @body)
-    (setf (publicp memo) @public)
-    (setf (updated-at memo) (get-universal-time))
-    (setf (updated-by memo) (current-user))
-    (zadd *titles* (updated-at memo) memo)
-    (redirect (format nil "/show/~a" @title))))
+(defaction /update/@title (:method :post)
+  (update-memo @title :body @body :public @public)
+  (redirect (format nil "/show/~a" @title)))
 
 (defun print-markdown (body)
   (let* ((3bmd-code-blocks:*code-blocks* t)
