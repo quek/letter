@@ -200,7 +200,9 @@
           (html (:p.text-danger "公開"))
           (html (:p  "非公開")))
       (print-markdown (body-of memo))
-      (:p (tags-as-string memo))
+      (:p (loop for tag in (tags-of memo)
+                do (html (:a :href #"""/tag/#,tag""" tag)
+                     " ")))
       (:p (:a.btn.btn-primary :href #"""/edit/#,@title""" "編集"))
       (:p (:a.btn.btn-default :href #"""/show/#,@title,/history""" "履歴")
         " "
@@ -220,7 +222,18 @@
     (del key))
   (redirect "/"))
 
+(defaction /tag/@tag ()
+  (with-default-template (:title @tag)
+    (:h1 @tag)
+    (loop for memo in (memos-by-tag @tag)
+          do (html (:li.memo-as-list
+                    (:a :href #"""/show/#,(title-of memo)"""
+                      (:h3 (title-of memo))
+                      (:span.time (time-to-s (updated-at memo)))
+                      (when (publicp memo)
+                        (html (:span.public "公開")))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar *server*)
 
 (defclass memo-app (application)

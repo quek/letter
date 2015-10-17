@@ -99,9 +99,8 @@
 (defmethod (setf tags-of) :around (tags (memo memo))
   (let* ((tags (normalize-tag tags))
          (before-tags (tags-of memo))
-         (diff (set-difference before-tags tags :test #'equal))
-         (add (intersection tags diff))
-         (remove (intersection before-tags diff)))
+         (add (set-difference tags before-tags :test #'equal))
+         (remove (set-difference before-tags tags :test #'equal)))
     (call-next-method tags memo)
     (loop for tag in add
           do (sadd (tag-key tag) memo))
@@ -116,6 +115,9 @@
       (if not-found-error-p
           (error (make-condition 'not-found-error))
           nil)))
+
+(defun memos-by-tag (tag)
+  (smembers (tag-key tag)))
 
 (defun create-memo (&key title body public tags)
   (aprog1 (make-instance 'memo
