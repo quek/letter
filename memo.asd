@@ -5,6 +5,7 @@
                (:file "config")
                (:file "util")
                (:file "condition")
+               (:file "key")
                (:file "model")
                (:file "memo")
                (:file "css")

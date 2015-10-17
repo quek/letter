@@ -131,11 +131,14 @@
 (defaction /preview ()
   (print-markdown @body))
 
-(defun markdown-form (body &key (publicp nil))
+(defun markdown-form (body &key (publicp nil) (tags ""))
   (html
     (:div.row
      (:div.col-xs-6
       (markdown-editor body)
+      (:div.form-group
+       (:input#tags.form-control :type "text" :name "tags" :value tags
+                                 :placeholder "スペース区切りで タグ"))
       (:div.form-group
        (:label :for "public"
          (:input#public :type "checkbox" :name "public" :value 1 :checked publicp)
@@ -149,7 +152,9 @@
     (with-default-template (:title @title)
       (:h1 @title)
       (:form :action #"""/update/#,@title""" :method "post"
-        (markdown-form (body-of memo) :publicp (publicp memo))))))
+        (markdown-form (body-of memo)
+                       :publicp (publicp memo)
+                       :tags (tags-as-string memo))))))
 
 (defaction /new ()
   (with-default-template (:title "新しく作る")
@@ -167,11 +172,12 @@
       (progn
         (create-memo :title @title
                      :body @body
-                     :public @public)
+                     :public @public
+                     :tags @tags)
         (redirect (format nil "/show/~a" @title)))))
 
 (defaction /update/@title (:method :post)
-  (update-memo @title :body @body :public @public)
+  (update-memo @title :body @body :public @public :tags @tags)
   (redirect (format nil "/show/~a" @title)))
 
 (defun print-markdown (body)
@@ -194,6 +200,7 @@
           (html (:p.text-danger "公開"))
           (html (:p  "非公開")))
       (print-markdown (body-of memo))
+      (:p (tags-as-string memo))
       (:p (:a.btn.btn-primary :href #"""/edit/#,@title""" "編集"))
       (:p (:a.btn.btn-default :href #"""/show/#,@title,/history""" "履歴")
         " "
