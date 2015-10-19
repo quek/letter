@@ -190,7 +190,7 @@
                                         "<a href=\"/show/\\1\">\\1</a>"))
          (html (ppcre:regex-replace-all "(>[^<]*)(https?://[^\\s<]+)"
                                         html
-                                        "\\1<a href=\"\\2\">\\2</a>")))
+                                        #"""\1<a href="\2" target="_blank">\2</a>""")))
     (write-string html *request*))
   nil)
 
