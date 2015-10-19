@@ -184,12 +184,14 @@
   (let* ((3bmd-code-blocks:*code-blocks* t)
          (3bmd-code-blocks:*code-blocks-default-colorize* :common-lisp)
          (html (with-output-to-string (out)
-                 (3bmd:parse-string-and-print-to-stream body out))))
-    (write-string
-     (ppcre:regex-replace-all "\\[\\[([^]]+)\\]\\]"
-                              html
-                              "<a href=\"/show/\\1\">\\1</a>")
-     *request*))
+                 (3bmd:parse-string-and-print-to-stream body out)))
+         (html (ppcre:regex-replace-all "\\[\\[([^]]+)\\]\\]"
+                                        html
+                                        "<a href=\"/show/\\1\">\\1</a>"))
+         (html (ppcre:regex-replace-all "(>[^<]*)(https?://[^\\s<]+)"
+                                        html
+                                        "\\1<a href=\"\\2\">\\2</a>")))
+    (write-string html *request*))
   nil)
 
 (defaction /show/@title ()
