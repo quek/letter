@@ -2,7 +2,7 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
-(defmacro with-public-template ((&key (title "memo")) &body contents)
+(defmacro with-public-template ((&key (title "letter")) &body contents)
   `(html
      (:!doctype :html t)
      (:html :lang "ja"
@@ -18,6 +18,7 @@
          (:script :src "https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"))
        (:body
            (:div.container-fluid
+            (:p (:a :href "/public" "letter"))
             ,@contents)
          (:script :src "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js")))))
 
@@ -25,7 +26,6 @@
   (with-public-template (:title "メモ")
     (:div.row
      (:div.col-xs-3
-      (:h2 (:a :href "/public" "memo"))
       (:ul (loop for (memo . time) in (zrang *publics* 0 nil :from-end t :with-scores t) do
         (html (:li.memo-as-list
                (:a :href #"""/public/#,(title-of memo)"""
@@ -41,7 +41,18 @@
     (unless (publicp memo)
       (error (make-condition 'not-found-error)))
     (with-public-template (:title @title)
-      (html
-        (:h2 (:a :href "/public" "memo"))
-        (:h1 @title)
-        (print-markdown (body-of memo))))))
+      (:h1 @title)
+      (print-markdown (body-of memo))
+      (:p (loop for tag in (tags-of memo)
+                do (html (:a :href #"""/public/tag/#,tag""" tag)
+                     " "))))))
+
+(defaction /public/tag/@tag ()
+  (with-public-template (:title @tag)
+    (:h1 @tag)
+    (loop for memo in (memos-by-tag @tag)
+          if (publicp memo)
+          do (html (:li.memo-as-list
+                    (:a :href #"""/public/#,(title-of memo)"""
+                      (:h3 (title-of memo))
+                      (:span.time (time-to-s (updated-at memo)))))))))

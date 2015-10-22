@@ -227,13 +227,14 @@
 (defaction /tag/@tag ()
   (with-default-template (:title @tag)
     (:h1 @tag)
-    (loop for memo in (memos-by-tag @tag)
-          do (html (:li.memo-as-list
-                    (:a :href #"""/show/#,(title-of memo)"""
-                      (:h3 (title-of memo))
-                      (:span.time (time-to-s (updated-at memo)))
-                      (when (publicp memo)
-                        (html (:span.public "公開")))))))))
+    (:ul
+        (loop for memo in (memos-by-tag @tag)
+              do (html (:li.memo-as-list
+                        (:a :href #"""/show/#,(title-of memo)"""
+                          (:h3 (title-of memo))
+                          (:span.time (time-to-s (updated-at memo)))
+                          (when (publicp memo)
+                            (html (:span.public "公開"))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar *server*)
