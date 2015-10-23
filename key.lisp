@@ -1,4 +1,4 @@
-(in-package :memo)
+(in-package :letter)
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 

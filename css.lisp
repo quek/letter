@@ -1,4 +1,4 @@
-(in-package :memo)
+(in-package :letter)
 
 (defaction /main.css ()
   (setf (content-type) "text/css")

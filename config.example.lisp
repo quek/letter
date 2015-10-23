@@ -1,4 +1,4 @@
-(in-package :memo)
+(in-package :letter)
 
 (defparameter *default-directory*
   (pathname (directory-namestring #.(or *compile-file-truename* *load-truename*)))

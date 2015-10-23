@@ -1,4 +1,4 @@
-(in-package :memo)
+(in-package :letter)
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
@@ -17,7 +17,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; テンプレート
-(defmacro with-default-template ((&key (title "memo") (login-required t))
+(defmacro with-default-template ((&key (title "letter") (login-required t))
                                  &body contents)
   `(progn
      (if (and ,login-required (not (current-user)))
@@ -39,7 +39,7 @@
                  (:nav.navbar.navbar-inverse
                   (:div.container-fluid
                    (:div.navbar-header
-                    (:a.navbar-brand :href "/" "memo"))
+                    (:a.navbar-brand :href "/" "letter"))
                    (:div.navbar-right
                     (:div.login-user (and (current-user) (email-of (current-user)))))))
                (:div.container-fluid

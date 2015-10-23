@@ -1,4 +1,4 @@
-(asdf:defsystem :memo
+(asdf:defsystem :letter
   :version "0.0.1"
   :serial t
   :components ((:file "packages")
@@ -7,7 +7,7 @@
                (:file "condition")
                (:file "key")
                (:file "model")
-               (:file "memo")
+               (:file "letter")
                (:file "css")
                (:file "public"))
   :depends-on (:info.read-eval-print.series-ext

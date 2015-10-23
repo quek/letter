@@ -1,4 +1,4 @@
-(info.read-eval-print.series-ext:sdefpackage :memo
+(info.read-eval-print.series-ext:sdefpackage :letter
   (:use :cl
         :hu.dwim.defclass-star
         :anaphora

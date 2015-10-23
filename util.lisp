@@ -1,4 +1,4 @@
-(in-package :memo)
+(in-package :letter)
 
 (defun lines (string)
   (ppcre:split "\\r?\\n" string))
