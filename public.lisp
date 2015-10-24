@@ -34,7 +34,8 @@
      (:div.col-xs-9
       (awhen (car (zrang *publics* 0 0 :from-end t))
         (html (:h1 (title-of it))
-              (print-markdown (body-of it))))))))
+          (:p.time (time-to-s (public-at it)))
+          (print-markdown (body-of it))))))))
 
 (defaction /public/@title ()
   (let ((memo (find-memo @title)))
@@ -42,6 +43,7 @@
       (error (make-condition 'not-found-error)))
     (with-public-template (:title @title)
       (:h1 @title)
+      (:p.time (time-to-s (public-at memo)))
       (print-markdown (body-of memo))
       (:p (loop for tag in (tags-of memo)
                 do (html (:a :href #"""/public/tag/#,tag""" tag)
