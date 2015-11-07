@@ -9,3 +9,5 @@
 (defparameter *swank-port* 4009 "SLIME のポート。")
 
 (setf unpyo::*session-secret* "hello world!")
+
+(setf clhs-lookup::*hyperspec-map-file* #p"/usr/share/doc/hyperspec/Data/Map_Sym.txt")
