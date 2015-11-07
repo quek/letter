@@ -267,8 +267,6 @@
   (load-google-oauth)
   (unless *db*
     (setf *db* (open-db (merge-pathnames "lepis/" *default-directory*))))
-  ;; html
-  (setf info.read-eval-print.html:*html-pprint* nil)
   ;; Unpyo
   (setq *server* (make-server :app (make-instance 'memo-app) :port port))
   (run *server*))
