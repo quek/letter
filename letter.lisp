@@ -29,12 +29,12 @@
                (:meta :name "viewport" :content "width=device-width, initial-scale=1")
                (:title ,title)
                (:link :rel "stylesheet"
-                 :href "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css")
+                 :href "/css/bootstrap.min.css")
                (:link :rel "stylesheet" :href
-                 "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css")
+                 "/bootstrap-theme.min.css")
                (:link :href "/main.css" :rel "stylesheet" :type "text/css")
-               (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
-               (:script :src "https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"))
+               (:script :src "/js/jquery-2.1.4.min.js")
+               (:script :src "/js/underscore-min.js"))
              (:body
                  (:nav.navbar.navbar-inverse
                   (:div.container-fluid
@@ -239,8 +239,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar *server*)
 
-(defclass memo-app (application)
+(defclass memo-app (static-application application)
   ())
+
+(defun static-mappings ()
+  `(("/" ,(merge-pathnames "public/" *default-directory*))))
 
 (defmethod call :around ((app memo-app))
   (handler-case (call-next-method)
@@ -268,7 +271,10 @@
   (unless *db*
     (setf *db* (open-db (merge-pathnames "lepis/" *default-directory*))))
   ;; Unpyo
-  (setq *server* (make-server :app (make-instance 'memo-app) :port port))
+  (setq *server*
+        (make-server :app (make-instance 'memo-app
+                                         :static-mappings (static-mappings))
+                     :port port))
   (run *server*))
 
 ;; stop
