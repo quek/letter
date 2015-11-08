@@ -28,10 +28,8 @@
              (:head (:meta :charset "UTF-8")
                (:meta :name "viewport" :content "width=device-width, initial-scale=1")
                (:title ,title)
-               (:link :rel "stylesheet"
-                 :href "/css/bootstrap.min.css")
-               (:link :rel "stylesheet" :href
-                 "/bootstrap-theme.min.css")
+               (:link :rel "stylesheet" :href "/css/bootstrap.min.css")
+               (:link :rel "stylesheet" :href "/css/bootstrap-theme.min.css")
                (:link :href "/main.css" :rel "stylesheet" :type "text/css")
                (:script :src "/js/jquery-2.1.4.min.js")
                (:script :src "/js/underscore-min.js"))

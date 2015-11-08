@@ -9,13 +9,11 @@
        (:head (:meta :charset "UTF-8")
          (:meta :name "viewport" :content "width=device-width, initial-scale=1")
          (:title ,title)
-         (:link :rel "stylesheet"
-           :href "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css")
-         (:link :rel "stylesheet" :href
-           "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css")
+         (:link :rel "stylesheet" :href "/css/bootstrap.min.css")
+         (:link :rel "stylesheet" :href "/css/bootstrap-theme.min.css")
          (:link :href "/main.css" :rel "stylesheet" :type "text/css")
-         (:script :src "https://code.jquery.com/jquery-2.1.4.min.js")
-         (:script :src "https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"))
+         (:script :src "/js/jquery-2.1.4.min.js")
+         (:script :src "/js/underscore-min.js"))
        (:body
            (:div.container-fluid
             (:p (:a :href "/public" "letter"))
