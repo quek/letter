@@ -18,3 +18,9 @@
 (defun tag-key (tag)
   "memo のセット"
   #"""tag #,tag""")
+
+(defun search-key (word)
+  "search 用の zset"
+  #"""s #,word""")
+
+(defvar *word-hash-key* '*word-hash-key* "memo をキー、ワードリストを値としたハッシュ")

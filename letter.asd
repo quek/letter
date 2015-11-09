@@ -6,6 +6,7 @@
                (:file "util")
                (:file "condition")
                (:file "key")
+               (:file "search")
                (:file "model")
                (:file "letter")
                (:file "css")

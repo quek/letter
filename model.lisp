@@ -35,7 +35,7 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defclass* memo ()
+(defclass* memo (search-mixin)
   ((title)
    (body :reader body-of :initform "" :initarg nil)
    (tags :initform ())
@@ -156,3 +156,7 @@
     tags)
   (:method ((tags string))
     (ppcre:split "\\s+" tags)))
+
+
+(defmethod search-fields ((self memo))
+  '(title body))
