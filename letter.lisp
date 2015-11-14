@@ -45,7 +45,7 @@
                   (html (:ul (loop for error in it do
                     (html (:li.text-warning error))))))
                 ,@contents)
-               (:script :src "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js")))))))
+               (:script :src "/js/bootstrap.min.js")))))))
 
 (defun markdown-editor (body)
   (html
