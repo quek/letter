@@ -46,14 +46,11 @@
           collect s)))
 
 (defun search-search (string &key (with-scores nil))
-  (let ((words (search-tokenize string))
-        (dest #"""tmp #,string"""))
+  (let ((words (search-tokenize string)))
     (when words
-      (unwind-protect
-           (progn
-             (zinterstore dest (mapcar #'search-key words))
-             (zrang dest 0 nil :from-end t :with-scores with-scores))
-        (del dest)))))
+      (with-temp-keys (dest)
+        (zinterstore dest (mapcar #'search-key words))
+        (zrang dest 0 nil :from-end t :with-scores with-scores)))))
 
 #+nil
 (prong
