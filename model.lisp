@@ -128,7 +128,8 @@
     (! (memo-key title) it)
     (zadd *titles* (updated-at it) it)
     (when public
-      (zadd *publics* (public-at it) it))))
+      (zadd *publics* (public-at it) it))
+    (search-index it)))
 
 (defun update-memo (title &key (body nil body-supplied-p)
                      (public nil public-supplied-p)
@@ -145,7 +146,8 @@
         (zadd *publics* (public-at it) it)
         (zrem *publics* it))
     (when tags-supplied-p
-      (setf (tags-of it) tags))))
+      (setf (tags-of it) tags))
+    (search-index it)))
 
 #+nil
 (describe (aprog1 (make-instance 'memo)

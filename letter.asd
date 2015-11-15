@@ -6,11 +6,20 @@
                (:file "util")
                (:file "condition")
                (:file "key")
-               (:file "search")
+               (:file "search-mixin")
                (:file "model")
                (:file "letter")
-               (:file "css")
-               (:file "public"))
+               (:module "page"
+                :serial t
+                :components ((:file "css")
+                             (:module "private"
+                              :serial t
+                              :components ((:file "private")
+                                           (:file "search")))
+                             (:module "public"
+                              :serial t
+                              :components ((:file "public")
+                                           (:file "search"))))))
   :depends-on (:info.read-eval-print.series-ext
                :info.read-eval-print.double-quote
                :info.read-eval-print.lambda
