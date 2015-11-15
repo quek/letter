@@ -27,7 +27,7 @@ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
          (:script :src "/js/bootstrap.min.js")))))
 
 (defaction /public ()
-  (with-public-template (:title "メモ")
+  (with-public-template (:title "letter")
     (:div.row
      (:div.col-xs-3
       (:ul (loop for (memo . time) in (zrang *publics* 0 nil :from-end t :with-scores t) do
