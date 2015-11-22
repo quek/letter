@@ -55,6 +55,6 @@
 
 #+nil
 (prong
+ (mapc #'del (keys "^s "))
  (mapc #'search-index (zrang *titles* 0 nil))
- (mapc #'del (keys "^s ")))
-
+)
