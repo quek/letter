@@ -105,12 +105,13 @@
       ($ (^ (let (($body ($ "#body")))
               (\. ($ document)
                   (on "keydown input" "#body"
-                      (\. *_ (debounce (^ (\. $
-                                              (get "/preview"
-                                                   ({} body (\. $body (val)))
-                                                   (^ (\. ($ "#preview-area")
-                                                          (html _r))))))
-                                       100))))
+                      (\. *_ (debounce
+                              (^ (\. $
+                                     (post "/preview"
+                                           ({} body (\. $body (val)))
+                                           (^ (\. ($ "#preview-area")
+                                                  (html _r))))))
+                              100))))
               (if (\. $body (val))
                   (\. $body
                       (trigger "keydown")))))))))
@@ -178,8 +179,7 @@
          (html (ppcre:regex-replace-all "(>[^<]*)(https?://[^\\s<]+)"
                                         html
                                         #"""\1<a href="\2" target="_blank">\2</a>""")))
-    (write-string html *request*))
-  nil)
+    (html (raw html))))
 
 (defaction /show/@title ()
   (let ((memo (find-memo @title)))
