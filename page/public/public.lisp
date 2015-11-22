@@ -2,6 +2,14 @@
 
 (named-readtables:in-readtable info.read-eval-print.double-quote:|#"|)
 
+(defparameter *analytics-code*
+  "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-69873049-1', 'auto');
+ga('send', 'pageview');")
+
 (defmacro with-public-template ((&key (title "letter")) &body contents)
   `(html
      (:!doctype :html t)
@@ -14,14 +22,13 @@
          (:link :href "/main.css" :rel "stylesheet" :type "text/css")
          (:script :src "/js/jquery-2.1.4.min.js")
          (:script :src "/js/underscore-min.js")
-         (:script (raw "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-  ga('create', 'UA-69873049-1', 'auto');
-  ga('send', 'pageview');")))
+         (:script (raw ,*analytics-code*)))
        (:body
            (:div.container-fluid
+            (:form.form-inline
+             :style "float: right; margin-top: 5px;"
+             :action "/public/search" :method "get"
+             (:input.form-control :type "search" :name "q" :value (param "q") :placeholder "検索"))
             (:p (:a :href "/public" "letter"))
             ,@contents)
          (:script :src "/js/bootstrap.min.js")))))

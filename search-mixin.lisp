@@ -45,11 +45,12 @@
           for s = (subseq str i (+ i 2))
           collect s)))
 
-(defun search-search (string &key (with-scores nil))
+(defun search-search (string &key (with-scores nil) (only-public-p t))
   (let ((words (search-tokenize string)))
     (when words
       (with-temp-keys (dest)
-        (zinterstore dest (mapcar #'search-key words))
+        (apply #'zinterstore dest (mapcar #'search-key words)
+               (when only-public-p (list :filter #'publicp)))
         (zrang dest 0 nil :from-end t :with-scores with-scores)))))
 
 #+nil
