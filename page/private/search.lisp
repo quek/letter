@@ -10,7 +10,7 @@
              (:a :href #"""/show/#,(title-of memo)"""
                (:h3 (title-of memo))
                (:span.time (time-to-s (updated-at memo)))
-               " "
+               " score:"
                (:span score)
                (when (publicp memo)
                  (html (:span.public "公開"))))))))))

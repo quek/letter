@@ -48,10 +48,10 @@
 (defun search-search (string &key (with-scores nil) (only-public-p t))
   (let ((words (search-tokenize string)))
     (when words
-      (with-temp-keys (dest)
-        (apply #'zinterstore dest (mapcar #'search-key words)
-               (when only-public-p (list :filter #'publicp)))
-        (zrang dest 0 nil :from-end t :with-scores with-scores)))))
+      (apply #'zinter (mapcar #'search-key words)
+             :from-end t :with-scores with-scores
+             (when only-public-p (list :filter #'publicp))))))
+
 
 #+nil
 (prong
