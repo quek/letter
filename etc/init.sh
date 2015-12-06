@@ -34,7 +34,7 @@ PIDFILE=/home/ancient/quicklisp/local-projects/letter/tmp/$NAME.pid
 set -e
 
 do_start() {
-    start-stop-daemon --start --background --quiet --pidfile $PIDFILE -c $USER:$GROUP --exec $DAEMON
+    start-stop-daemon --start --background --quiet --make-pidfile --pidfile $PIDFILE --chuid $USER:$GROUP --exec $DAEMON
 }
 
 do_stop() {
