@@ -33,7 +33,7 @@ GROUP=ancient
 set -e
 
 do_start() {
-    start-stop-daemon --start --quiet --pidfile /var/run/$NAME.pid -c $USER:$GROUP --exec $DAEMON
+    start-stop-daemon --start --background --quiet --pidfile /var/run/$NAME.pid -c $USER:$GROUP --exec $DAEMON
 }
 
 do_stop() {
