@@ -26,6 +26,7 @@ test -x $DAEMON || exit 0
 
 USER=ancient
 GROUP=ancient
+PIDFILE=/home/ancient/quicklisp/local-projects/letter/tmp/$NAME.pid
 
 # Get lsb functions
 . /lib/lsb/init-functions
@@ -33,11 +34,11 @@ GROUP=ancient
 set -e
 
 do_start() {
-    start-stop-daemon --start --background --quiet --pidfile /var/run/$NAME.pid -c $USER:$GROUP --exec $DAEMON
+    start-stop-daemon --start --background --quiet --pidfile $PIDFILE -c $USER:$GROUP --exec $DAEMON
 }
 
 do_stop() {
-    start-stop-daemon --stop --oknodo --quiet --pidfile /var/run/$NAME.pid --exec $DAEMON
+    start-stop-daemon --stop --oknodo --quiet --pidfile $PIDFILE --exec $DAEMON
 }
 
 case "$1" in
