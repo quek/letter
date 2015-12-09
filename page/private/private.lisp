@@ -51,7 +51,20 @@
                (:h3 (title-of memo))
                (:span.time (time-to-s time))
                (when (publicp memo)
-                 (html (:span.public "公開"))))))))))
+                 (html (:span.public "公開"))))))))
+    (:p (:a :href "/git-pull" "git pull"))
+    (:p (:a :href "/quickload-letter" "(ql:quickload \"letter\")"))))
+
+(defaction /git-pull ()
+  (with-output-to-string (s)
+    (sb-ext:run-program "/bin/zsh" '("-c" "for i in *(/); (cd $i; git pull)")
+                        :directory (merge-pathnames "~/quicklisp/local-projects/")
+                        :output s))
+  (redirect "/"))
+
+(defaction /quickload-letter ()
+  (ql:quickload "letter")
+  (redirect "/"))
 
 (defaction /login ()
   (with-default-template (:login-required nil)
