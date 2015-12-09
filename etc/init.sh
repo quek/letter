@@ -55,6 +55,7 @@ case "$1" in
     restart)
         log_daemon_msg "Restarting $DESC" "$NAME"
         do_stop
+        sleep 1
         do_start
         log_end_msg $?
         ;;
